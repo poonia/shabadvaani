@@ -107,15 +107,31 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      height: var(--nav-h);
+      /* height grows to include the status bar inset */
+      height: calc(var(--nav-h) + env(safe-area-inset-top, 0px));
       background: var(--bg-nav);
       border-bottom: 1px solid var(--border);
       display: flex;
-      align-items: center;
-      padding: 0 20px;
+      align-items: flex-end; /* keep buttons at the bottom of the taller bar */
+      /* push content below the status bar */
+      padding: env(safe-area-inset-top, 0px) max(20px, env(safe-area-inset-right, 20px)) 0 max(20px, env(safe-area-inset-left, 20px));
+      padding-bottom: 0;
       gap: 12px;
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
+    }
+    /* Give the inner row its own fixed height so buttons stay centred */
+    .top-nav > * {
+      margin-bottom: 0;
+      height: var(--nav-h);
+      display: flex;
+      align-items: center;
+    }
+    /* Title doesn't need flex itself, just inherit height */
+    .nav-title {
+      height: var(--nav-h) !important;
+      line-height: var(--nav-h);
+      display: block !important;
     }
     .nav-back {
       width: 40px; height: 40px;
@@ -172,12 +188,14 @@
 
     /* ── Home View ── */
     #home-view {
-      padding-bottom: 32px;
+      padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
     }
 
     /* Book Hero */
     .book-hero {
       padding: 40px 24px 32px;
+      /* also pad top on home since there's no sticky nav above it */
+      padding-top: calc(40px + env(safe-area-inset-top, 0px));
       background: linear-gradient(180deg, #12121a 0%, var(--bg-base) 100%);
       border-bottom: 1px solid var(--border);
       position: relative;
@@ -374,7 +392,7 @@
     .chapter-scroll-area {
       flex: 1;
       overflow-y: auto;
-      padding-bottom: calc(var(--bottom-nav-h) + 24px);
+      padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 24px);
     }
 
     .chapter-header {
@@ -435,15 +453,24 @@
     .bottom-nav {
       position: sticky;
       bottom: 0;
-      height: var(--bottom-nav-h);
+      /* grow height to include the home indicator inset */
+      height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
       background: var(--bg-nav);
       border-top: 1px solid var(--border);
       display: flex;
-      align-items: center;
-      padding: 0 20px;
+      align-items: flex-start; /* buttons sit at the top of the taller bar */
+      padding: 0 max(20px, env(safe-area-inset-right, 20px)) env(safe-area-inset-bottom, 0px) max(20px, env(safe-area-inset-left, 20px));
+      padding-top: 0;
       gap: 12px;
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
+    }
+    /* Inner row height stays fixed so buttons stay at correct size */
+    .bottom-nav > * {
+      margin-top: 0;
+      height: var(--bottom-nav-h);
+      display: flex;
+      align-items: center;
     }
     .bottom-nav-btn {
       flex: 1;
@@ -492,7 +519,7 @@
     /* ── Toast ── */
     .toast {
       position: fixed;
-      bottom: calc(var(--bottom-nav-h) + 16px);
+      bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 16px);
       left: 50%;
       transform: translateX(-50%) translateY(20px);
       background: var(--bg-card);
