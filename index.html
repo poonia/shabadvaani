@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="hi" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#c8922a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="शब्दवाणी" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <title>श्री गुरु जम्भेश्वर शब्दवाणी</title>
+  <style>
+    /* ── Design Tokens ── */
+    :root {
+      --bg-base:       #0d0d10;
+      --bg-card:       #16161d;
+      --bg-card-hover: #1e1e28;
+      --bg-nav:        #111118;
+      --border:        #2a2a38;
+      --gold:          #c8922a;
+      --gold-light:    #e8b050;
+      --gold-dim:      #7a5618;
+      --text-primary:  #f0e8d8;
+      --text-secondary:#a89880;
+      --text-muted:    #5a5468;
+      --accent-red:    #8b3a3a;
+      --radius-sm:     8px;
+      --radius-md:     14px;
+      --radius-lg:     20px;
+      --nav-h:         64px;
+      --bottom-nav-h:  68px;
+      --font-devanagari: 'Noto Serif Devanagari', 'Mangal', 'Sanskrit Text', serif;
+      --font-ui:       -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      min-height: 100dvh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Views ── */
+    .view { display: none; min-height: 100dvh; }
+    .view.active { display: block; }
+
+    /* ── Loading Screen ── */
+    #loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      gap: 24px;
+    }
+    .loader-om {
+      font-size: 64px;
+      color: var(--gold);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .loader-text {
+      color: var(--text-secondary);
+      font-size: 14px;
+      letter-spacing: 0.08em;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.92); }
+    }
+
+    /* ── Error Screen ── */
+    #error-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      gap: 16px;
+      padding: 32px;
+      text-align: center;
+    }
+    #error-screen.show { display: flex; }
+    #error-screen h2 { color: var(--gold); }
+    #error-screen p { color: var(--text-secondary); line-height: 1.6; }
+    .btn-retry {
+      margin-top: 8px;
+      padding: 12px 28px;
+      background: var(--gold);
+      color: #0d0d10;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-retry:hover { background: var(--gold-light); }
+
+    /* ── Top Nav ── */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: var(--nav-h);
+      background: var(--bg-nav);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .nav-back {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: color 0.2s, background 0.2s;
+      flex-shrink: 0;
+    }
+    .nav-back:hover { color: var(--text-primary); background: var(--bg-card-hover); }
+    .nav-title {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .nav-bookmark-btn {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: all 0.25s;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .nav-bookmark-btn:hover { color: var(--gold); border-color: var(--gold-dim); }
+    .nav-bookmark-btn.bookmarked { color: var(--gold); }
+    .nav-bookmark-btn.bookmarked svg { fill: var(--gold); }
+
+    /* Bookmark ripple */
+    .nav-bookmark-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius-sm);
+      background: var(--gold);
+      opacity: 0;
+      transform: scale(0.6);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    .nav-bookmark-btn.flash::after {
+      opacity: 0.15;
+      transform: scale(1);
+    }
+
+    /* ── Home View ── */
+    #home-view {
+      padding-bottom: 32px;
+    }
+
+    /* Book Hero */
+    .book-hero {
+      padding: 40px 24px 32px;
+      background: linear-gradient(180deg, #12121a 0%, var(--bg-base) 100%);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .book-hero::before {
+      content: 'ॐ';
+      position: absolute;
+      right: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 160px;
+      color: var(--gold);
+      opacity: 0.04;
+      font-family: var(--font-devanagari);
+      pointer-events: none;
+      line-height: 1;
+    }
+    .book-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .book-title {
+      font-family: var(--font-devanagari);
+      font-size: clamp(22px, 5vw, 30px);
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.3;
+      margin-bottom: 10px;
+    }
+    .book-subtitle {
+      font-size: 14px;
+      color: var(--gold);
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+    .book-description {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      max-width: 480px;
+    }
+    .book-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .meta-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .meta-chip svg { flex-shrink: 0; }
+
+    /* Bookmark Card */
+    .section-label {
+      padding: 24px 24px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .bookmark-card {
+      margin: 0 16px;
+      background: linear-gradient(135deg, #1e1a10 0%, #1a1a22 100%);
+      border: 1px solid var(--gold-dim);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .bookmark-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--gold);
+      border-radius: 3px 0 0 3px;
+    }
+    .bookmark-card:hover { border-color: var(--gold); background: linear-gradient(135deg, #261f0e 0%, #1e1e2a 100%); }
+    .bookmark-card-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--gold);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .bookmark-card-heading {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .bookmark-card-title {
+      font-family: var(--font-devanagari);
+      font-size: 15px;
+      color: var(--text-primary);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .bookmark-card-arrow {
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gold-dim);
+    }
+
+    /* Chapter List */
+    .chapters-list {
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .chapter-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s, transform 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .chapter-item:hover {
+      border-color: var(--gold-dim);
+      background: var(--bg-card-hover);
+    }
+    .chapter-item:active { transform: scale(0.99); }
+    .chapter-item.bookmarked-item {
+      border-color: var(--gold-dim);
+    }
+    .chapter-number {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      margin-bottom: 5px;
+    }
+    .chapter-title {
+      font-family: var(--font-devanagari);
+      font-size: 14px;
+      color: var(--text-primary);
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .chapter-bookmark-dot {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      background: var(--gold);
+      border-radius: 50%;
+      display: none;
+    }
+    .chapter-item.bookmarked-item .chapter-bookmark-dot { display: block; }
+
+    /* ── Chapter View ── */
+    #chapter-view {
+      display: none;
+      flex-direction: column;
+      min-height: 100dvh;
+    }
+    #chapter-view.active { display: flex; }
+
+    .chapter-scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: calc(var(--bottom-nav-h) + 24px);
+    }
+
+    .chapter-header {
+      padding: 32px 24px 28px;
+      background: linear-gradient(180deg, #12121a 0%, var(--bg-base) 100%);
+      border-bottom: 1px solid var(--border);
+    }
+    .chapter-num-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .chapter-num-display {
+      font-family: var(--font-devanagari);
+      font-size: clamp(32px, 8vw, 52px);
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.1;
+      margin-bottom: 20px;
+    }
+    .chapter-title-display {
+      font-family: var(--font-devanagari);
+      font-size: clamp(15px, 3.5vw, 18px);
+      color: var(--text-secondary);
+      line-height: 1.6;
+      border-left: 2px solid var(--gold-dim);
+      padding-left: 16px;
+    }
+
+    .chapter-content-area {
+      padding: 32px 24px;
+    }
+    .chapter-content-text {
+      font-family: var(--font-devanagari);
+      font-size: clamp(16px, 3.8vw, 20px);
+      line-height: 1.85;
+      color: var(--text-primary);
+      letter-spacing: 0.01em;
+    }
+    .chapter-content-text .verse-marker {
+      display: inline-block;
+      color: var(--gold);
+      font-weight: 700;
+      margin: 0 4px;
+    }
+    .chapter-divider {
+      text-align: center;
+      padding: 28px 0;
+      color: var(--gold);
+      font-size: 20px;
+      opacity: 0.4;
+    }
+
+    /* ── Bottom Navigation ── */
+    .bottom-nav {
+      position: sticky;
+      bottom: 0;
+      height: var(--bottom-nav-h);
+      background: var(--bg-nav);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .bottom-nav-btn {
+      flex: 1;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .bottom-nav-btn:hover:not(:disabled) {
+      border-color: var(--gold-dim);
+      color: var(--text-primary);
+    }
+    .bottom-nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .bottom-nav-btn.next-btn {
+      background: linear-gradient(135deg, #1e1a10 0%, #1a1a22 100%);
+      border-color: var(--gold-dim);
+      color: var(--gold-light);
+    }
+    .bottom-nav-btn.next-btn:hover:not(:disabled) {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: linear-gradient(135deg, #261f0e 0%, #1e1e2a 100%);
+    }
+
+    /* Chapter counter in bottom nav */
+    .chapter-counter {
+      flex-shrink: 0;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      min-width: 50px;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: calc(var(--bottom-nav-h) + 16px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 20px;
+      font-size: 13px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 200;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast .toast-icon { color: var(--gold); margin-right: 6px; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── Google Fonts load hint ── */
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;600;700&display=swap');
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="loader-om">ॐ</div>
+  <div class="loader-text">लोड हो रहा है…</div>
+</div>
+
+<!-- Error -->
+<div id="error-screen">
+  <div style="font-size:40px">🙏</div>
+  <h2>डेटा लोड नहीं हो सका</h2>
+  <p>इंटरनेट कनेक्शन जांचें और दोबारा कोशिश करें।</p>
+  <button class="btn-retry" onclick="initApp()">दोबारा कोशिश करें</button>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<!-- ═══════════════════════════════════════
+     HOME VIEW
+═══════════════════════════════════════ -->
+<div id="home-view" class="view">
+
+  <!-- Book Hero -->
+  <div class="book-hero">
+    <div class="book-eyebrow">पवित्र ग्रंथ</div>
+    <h1 id="book-title" class="book-title">—</h1>
+    <div id="book-subtitle" class="book-subtitle"></div>
+    <p id="book-description" class="book-description"></p>
+    <div class="book-meta">
+      <div class="meta-chip">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span id="book-author"></span>
+      </div>
+      <div class="meta-chip">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <span id="book-chapters-count"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bookmarked Chapter -->
+  <div id="bookmark-section" style="display:none">
+    <div class="section-label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:4px"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      पढ़ना जारी रखें
+    </div>
+    <div id="bookmark-card" class="bookmark-card" onclick="openBookmarkedChapter()">
+      <div class="bookmark-card-eyebrow">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        बुकमार्क किया गया
+      </div>
+      <div id="bookmark-card-heading" class="bookmark-card-heading"></div>
+      <div id="bookmark-card-title" class="bookmark-card-title"></div>
+      <div class="bookmark-card-arrow">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- All Chapters -->
+  <div class="section-label" id="chapters-label">सभी अध्याय</div>
+  <div id="chapters-list" class="chapters-list"></div>
+
+</div><!-- /home-view -->
+
+
+<!-- ═══════════════════════════════════════
+     CHAPTER VIEW
+═══════════════════════════════════════ -->
+<div id="chapter-view" class="view">
+
+  <!-- Top Nav -->
+  <nav class="top-nav">
+    <button class="nav-back" onclick="goHome()" aria-label="वापस जाएं">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="nav-title" id="chapter-nav-title"></div>
+    <button id="bookmark-btn" class="nav-bookmark-btn" onclick="toggleBookmark()" aria-label="बुकमार्क">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
+  </nav>
+
+  <!-- Scrollable Content -->
+  <div class="chapter-scroll-area" id="chapter-scroll-area">
+    <div class="chapter-header">
+      <div class="chapter-num-label" id="chapter-num-label"></div>
+      <div class="chapter-num-display" id="chapter-num-display"></div>
+      <div class="chapter-title-display" id="chapter-title-display"></div>
+    </div>
+    <div class="chapter-content-area">
+      <div id="chapter-content-text" class="chapter-content-text"></div>
+    </div>
+    <div class="chapter-divider">॥ ॐ ॥</div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button id="prev-btn" class="bottom-nav-btn" onclick="navigateChapter(-1)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      पिछला
+    </button>
+    <div class="chapter-counter" id="chapter-counter"></div>
+    <button id="next-btn" class="bottom-nav-btn next-btn" onclick="navigateChapter(1)">
+      अगला
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </nav>
+
+</div><!-- /chapter-view -->
+
+
+<script>
+  // ── State ──
+  let bookData = null;
+  let chapters = [];
+  let currentChapterIndex = 0;
+  const DB_URL = 'https://raw.githubusercontent.com/poonia/my-db/main/app-db.json';
+  const BOOKMARK_KEY = 'shabad_vani_bookmark';
+
+  // ── Boot ──
+  async function initApp() {
+    document.getElementById('loading').style.display = 'flex';
+    document.getElementById('error-screen').classList.remove('show');
+    hideAllViews();
+
+    try {
+      const data = await fetchWithCache(DB_URL);
+      const arr = Array.isArray(data) ? data : [data];
+      bookData = arr[0];
+      chapters = bookData.chapters || [];
+      renderHome();
+      showView('home-view');
+    } catch (e) {
+      console.error(e);
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error-screen').classList.add('show');
+    }
+  }
+
+  async function fetchWithCache(url) {
+    // Try cache first (via SW), then network
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('Network error');
+      return await resp.json();
+    } catch (e) {
+      // Try from cache storage directly if SW fetch fails
+      if ('caches' in window) {
+        const cache = await caches.open('shabad-vani-v1');
+        const cached = await cache.match(url);
+        if (cached) return cached.json();
+      }
+      throw e;
+    }
+  }
+
+  // ── Routing ──
+  function hideAllViews() {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  }
+  function showView(id) {
+    document.getElementById('loading').style.display = 'none';
+    hideAllViews();
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  // ── Render Home ──
+  function renderHome() {
+    document.getElementById('book-title').textContent = bookData.title || '';
+    document.getElementById('book-subtitle').textContent = bookData.subtitle || '';
+    document.getElementById('book-description').textContent = bookData.description || '';
+    document.getElementById('book-author').textContent = bookData.author || '';
+    document.getElementById('book-chapters-count').textContent = `${chapters.length} ${bookData.chaptersHeading || 'अध्याय'}`;
+    document.getElementById('chapters-label').textContent = `सभी ${bookData.chaptersHeading || 'अध्याय'}`;
+
+    renderBookmarkCard();
+    renderChapterList();
+  }
+
+  function renderBookmarkCard() {
+    const bk = getBookmark();
+    const section = document.getElementById('bookmark-section');
+    if (!bk) { section.style.display = 'none'; return; }
+
+    const ch = chapters.find(c => c.id == bk);
+    if (!ch) { section.style.display = 'none'; return; }
+
+    section.style.display = 'block';
+    document.getElementById('bookmark-card-heading').textContent = ch.heading || `अध्याय ${ch.id}`;
+    document.getElementById('bookmark-card-title').textContent = ch.title || '';
+  }
+
+  function renderChapterList() {
+    const bk = getBookmark();
+    const list = document.getElementById('chapters-list');
+    list.innerHTML = '';
+
+    chapters.forEach((ch, idx) => {
+      const isBookmarked = bk && ch.id == bk;
+      const item = document.createElement('div');
+      item.className = 'chapter-item' + (isBookmarked ? ' bookmarked-item' : '');
+      item.setAttribute('role', 'button');
+      item.setAttribute('tabindex', '0');
+      item.setAttribute('aria-label', `${ch.heading} खोलें`);
+      item.innerHTML = `
+        <div class="chapter-number">${ch.heading || 'अध्याय ' + ch.id}</div>
+        <div class="chapter-title">${ch.title || ''}</div>
+        <div class="chapter-bookmark-dot"></div>
+      `;
+      item.addEventListener('click', () => openChapter(idx));
+      item.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openChapter(idx); });
+      list.appendChild(item);
+    });
+  }
+
+  // ── Chapter Navigation ──
+  function openChapter(idx) {
+    currentChapterIndex = idx;
+    renderChapterView();
+    showView('chapter-view');
+    document.getElementById('chapter-scroll-area').scrollTo(0, 0);
+  }
+
+  function openBookmarkedChapter() {
+    const bk = getBookmark();
+    if (!bk) return;
+    const idx = chapters.findIndex(c => c.id == bk);
+    if (idx >= 0) openChapter(idx);
+  }
+
+  function goHome() {
+    renderBookmarkCard();
+    renderChapterList();
+    showView('home-view');
+  }
+
+  function navigateChapter(dir) {
+    const newIdx = currentChapterIndex + dir;
+    if (newIdx < 0 || newIdx >= chapters.length) return;
+    openChapter(newIdx);
+  }
+
+  function renderChapterView() {
+    const ch = chapters[currentChapterIndex];
+    if (!ch) return;
+
+    const heading = ch.heading || `अध्याय ${ch.id}`;
+    document.getElementById('chapter-nav-title').textContent = heading;
+    document.getElementById('chapter-num-label').textContent = bookData.chaptersHeading?.trim() || 'शब्द';
+    document.getElementById('chapter-num-display').textContent = heading;
+    document.getElementById('chapter-title-display').textContent = ch.title || '';
+    document.getElementById('chapter-content-text').innerHTML = formatContent(ch.content || '');
+    document.getElementById('chapter-counter').textContent = `${currentChapterIndex + 1} / ${chapters.length}`;
+
+    // Prev/Next buttons
+    document.getElementById('prev-btn').disabled = currentChapterIndex === 0;
+    document.getElementById('next-btn').disabled = currentChapterIndex === chapters.length - 1;
+
+    // Bookmark state
+    updateBookmarkBtn();
+  }
+
+  function formatContent(text) {
+    // Highlight verse markers like ।। 1 ।।, ॥29॥ etc.
+    return text
+      .replace(/।।\s*(\d+)\s*।।/g, '<span class="verse-marker">।। $1 ।।</span>')
+      .replace(/॥(\d+)॥/g, '<span class="verse-marker">॥$1॥</span>')
+      .replace(/\n/g, '<br>');
+  }
+
+  // ── Bookmark Logic ──
+  function getBookmark() {
+    try { return localStorage.getItem(BOOKMARK_KEY); } catch { return null; }
+  }
+  function setBookmark(id) {
+    try { localStorage.setItem(BOOKMARK_KEY, id); } catch {}
+  }
+  function clearBookmark() {
+    try { localStorage.removeItem(BOOKMARK_KEY); } catch {}
+  }
+
+  function toggleBookmark() {
+    const ch = chapters[currentChapterIndex];
+    if (!ch) return;
+    const bk = getBookmark();
+    const btn = document.getElementById('bookmark-btn');
+
+    if (bk && ch.id == bk) {
+      clearBookmark();
+      showToast('बुकमार्क हटाया गया');
+    } else {
+      setBookmark(ch.id);
+      showToast('बुकमार्क किया गया ✓');
+    }
+
+    // Flash animation
+    btn.classList.add('flash');
+    setTimeout(() => btn.classList.remove('flash'), 350);
+    updateBookmarkBtn();
+  }
+
+  function updateBookmarkBtn() {
+    const ch = chapters[currentChapterIndex];
+    const bk = getBookmark();
+    const btn = document.getElementById('bookmark-btn');
+    const isBookmarked = ch && bk && ch.id == bk;
+    btn.classList.toggle('bookmarked', !!isBookmarked);
+    btn.setAttribute('aria-pressed', String(!!isBookmarked));
+  }
+
+  // ── Toast ──
+  let toastTimer = null;
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  // ── Service Worker ──
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+
+  // ── Start ──
+  initApp();
+</script>
+</body>
+</html>
